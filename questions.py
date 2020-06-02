@@ -130,13 +130,42 @@ def top_files(query, files, idfs, n):
     for word in query:
         for row in files:
             pair = (word, row)
-            tf_idfs[pair] = 0
             word_list = files[row]
             d = Counter(word_list)
             count = d[word]
             tf_idfs[pair] = count
+    
+    for t_row in tf_idfs:
+        for i_row in idfs:
+            if t_row[0] == i_row:
+                idf = idfs[i_row]
+                tf = tf_idfs[t_row]
+                tfidf= float(tf * idf)
+                tf_idfs[t_row] = tfidf
 
-    print(tf_idfs)
+    page_rank = {}
+    for row in files:
+        page_rank[row] = 0
+    
+    for t_row in tf_idfs:
+        for p_row in page_rank:
+            if p_row == t_row[1]:
+                page_rank[p_row] += tf_idfs[t_row]
+
+    file_list = []
+    val_list = []
+    for row in page_rank:
+        val_list.append(page_rank[row])
+    val_list = sorted(val_list)
+    val_list.reverse()
+    for i in range(len(val_list)):
+        for row in page_rank:
+            if val_list[i] == page_rank[row]:
+                if row not in file_list:
+                    file_list.append(row)
+    file_list = file_list[:n]
+
+    return file_list
 
 
 def top_sentences(query, sentences, idfs, n):
@@ -147,7 +176,67 @@ def top_sentences(query, sentences, idfs, n):
     the query, ranked according to idf. If there are ties, preference should
     be given to sentences that have a higher query term density.
     """
-    raise NotImplementedError
+    query_idf = {}
+    for word in query:
+        for row in idfs:
+            if word == row:
+                query_idf[word] = idfs[row]
+    sentence_val = {}
+    for word in query_idf:
+        for word1 in sentences:
+            if word in sentences[word1]:
+                if word1 in sentence_val:
+                    sentence_val[word1] += query_idf[word]
+                else:
+                    sentence_val[word1] = query_idf[word]
+    val_list = []
+    sentence_list = []
+    for row in sentence_val:
+        val_list.append(sentence_val[row])
+    val_list = sorted(val_list)
+    val_list.reverse()
+
+    for i in range(len(val_list)):
+        for row in sentence_val:
+            if val_list[i] == sentence_val[row]:
+                if row not in sentence_list:
+                    sentence_list.append(row)
+
+    max_sent = 0
+    top_vals = []
+    for i in range(len(val_list)):
+        if val_list[i] >= max_sent:
+            max_sent = val_list[i]
+            val = val_list[i]
+            top_vals.append(val)
+
+    cutoff = len(top_vals)
+    sentence_list = sentence_list[:cutoff]
+
+    word_freq = {}   
+    for word in query:
+        for i in range(len(sentence_list)):
+            if word in sentence_list[i]:
+                if sentence_list[i] in word_freq:
+                    word_freq[sentence_list[i]] += 1
+                else:
+                    word_freq[sentence_list[i]] = 1
+    final_val = []
+    final_sentence = []
+    for row in word_freq:
+        word_freq[row] = word_freq[row] / len(row)
+        final_val.append(word_freq[row])
+    
+    final_val = sorted(final_val)
+    final_val.reverse()
+    for i in range(len(final_val)):
+        for row in word_freq:
+            if word_freq[row] == final_val[i]:
+                final_sentence.append(row)
+    final_sentence = final_sentence[:n]
+
+    return final_sentence
+
 
 
 if __name__ == "__main__":
